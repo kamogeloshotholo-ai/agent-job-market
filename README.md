@@ -6,6 +6,8 @@ Built for the Binance Wallet × BNB Chain Agent ID hackathon. Submission closes 
 
 The market contract is not deployed from this repository. Addresses below are placeholders until the owner deploys from their own wallet.
 
+Deploy from a phone by opening the site’s [Deploy page](docs/deploy.html) (on GitHub Pages, <https://kamogeloshotholo-ai.github.io/agent-job-market/deploy.html>) inside MetaMask, Trust Wallet, or the Binance Web3 wallet browser: the page uses the injected wallet and never asks for a private key, switches to BSC testnet or mainnet, and on testnet deploys the stand-in Agent ID registry, the capped test USDT, and then the market with the fee inputs starting at 0, plus a handle registration and a test-USDT mint so a job can be tried on the spot. On mainnet the live registry `0x60B9262456dE011F7d15a54CdD8c48bAaa8B022F` and USDT `0x55d398326f99059fF775485246999027B3197955` are filled in and the deploy waits for an explicit confirm; every address has a copy button and a BscScan link. Source verification is the manually run “Verify on BscScan” GitHub Action, which takes the chain id and contract address and submits the checked-in standard JSON to Etherscan API v2 with the `BSCSCAN_API_KEY` secret.
+
 | Network | Market | USDT | Agent ID registry |
 | --- | --- | --- | --- |
 | BSC Testnet (97) | _not deployed_ | _set in `.env`_ | _mock, set in `.env`_ |
@@ -229,7 +231,9 @@ script/deploy-mock-registry.sh  testnet Agent ID stand-in
 script/deploy-mock-usdt.sh      testnet USDT stand-in
 script/verify.sh                verify an existing market on BscScan
 test/                           unit tests and fuzz tests
-docs/                           the page
+docs/                           the market page and the phone deploy page
+docs/verify/                    bytecode, ABI, and standard JSON for verification
+.github/workflows/verify.yml    manual BscScan verification
 ```
 
 ## License

@@ -837,6 +837,18 @@ contract AgentJobMarketTest is Test {
         assertTrue(registry.isTestnetMock());
     }
 
+    function test_checkedInBytecodeMatchesCompiler() public view {
+        assertEq(
+            vm.toString(type(AgentJobMarket).creationCode),
+            string.concat("0x", vm.readFile("docs/verify/AgentJobMarket.bin"))
+        );
+        assertEq(
+            vm.toString(type(MockAgentIdRegistry).creationCode),
+            string.concat("0x", vm.readFile("docs/verify/MockAgentIdRegistry.bin"))
+        );
+        assertEq(vm.toString(type(MockUSDT).creationCode), string.concat("0x", vm.readFile("docs/verify/MockUSDT.bin")));
+    }
+
     function test_directJobLists_recordBothSides() public {
         uint256 id = _accept();
         assertEq(market.posterJobIds(poster, 0, 10)[0], id);
