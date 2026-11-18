@@ -1,0 +1,28 @@
+name: Verify on BscScan
+
+on:
+  workflow_dispatch:
+    inputs:
+      chain_id:
+        description: "EIP-155 chain id"
+        required: true
+        type: choice
+        options:
+          - "97"
+          - "56"
+      contract_address:
+        description: "Deployed contract address"
+        required: true
+        type: string
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Submit the checked-in standard JSON
+        env:
+          CHAIN_ID: ${{ inputs.chain_id }}
+          CONTRACT_ADDRESS: ${{ inputs.contract_address }}
+          BSCSCAN_API_KEY: ${{ secrets.BSCSCAN_API_KEY }}
+        run: python3 script/verify_on_bscscan.py

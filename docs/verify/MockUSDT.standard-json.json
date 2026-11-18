@@ -1,0 +1,41 @@
+{
+  "language": "Solidity",
+  "sources": {
+    "src/mocks/MockUSDT.sol": {
+      "content": "// SPDX-License-Identifier: MIT\npragma solidity 0.8.26;\n\n/// @title MockUSDT\n/// @notice 18-decimal USDT stand-in for BSC testnet demos. Not Tether.\n/// @dev The constructor refuses chain 56. `faucet` is capped per address so a\n///      public testnet deployment cannot be minted without bound by one wallet.\ncontract MockUSDT {\n    error MainnetForbidden();\n    error CapExceeded();\n    error ZeroAmount();\n    error InsufficientBalance();\n    error InsufficientAllowance();\n\n    string public constant name = \"Test USDT\";\n    string public constant symbol = \"USDT\";\n    uint8 public constant decimals = 18;\n    uint256 public constant FAUCET_CAP = 100_000 ether;\n\n    uint256 public totalSupply;\n    mapping(address => uint256) public balanceOf;\n    mapping(address => mapping(address => uint256)) public allowance;\n    mapping(address => uint256) public mintedBy;\n\n    event Transfer(address indexed from, address indexed to, uint256 amount);\n    event Approval(address indexed owner, address indexed spender, uint256 amount);\n\n    constructor() {\n        if (block.chainid == 56) revert MainnetForbidden();\n    }\n\n    function isTestnetMock() external pure returns (bool) {\n        return true;\n    }\n\n    function faucet(uint256 amount) external {\n        if (amount == 0) revert ZeroAmount();\n        uint256 next = mintedBy[msg.sender] + amount;\n        if (next > FAUCET_CAP) revert CapExceeded();\n        mintedBy[msg.sender] = next;\n        totalSupply += amount;\n        balanceOf[msg.sender] += amount;\n        emit Transfer(address(0), msg.sender, amount);\n    }\n\n    function approve(address spender, uint256 amount) external returns (bool) {\n        allowance[msg.sender][spender] = amount;\n        emit Approval(msg.sender, spender, amount);\n        return true;\n    }\n\n    function transfer(address to, uint256 amount) external returns (bool) {\n        _transfer(msg.sender, to, amount);\n        return true;\n    }\n\n    function transferFrom(address from, address to, uint256 amount) external returns (bool) {\n        uint256 allowed = allowance[from][msg.sender];\n        if (allowed != type(uint256).max) {\n            if (allowed < amount) revert InsufficientAllowance();\n            allowance[from][msg.sender] = allowed - amount;\n        }\n        _transfer(from, to, amount);\n        return true;\n    }\n\n    function _transfer(address from, address to, uint256 amount) internal {\n        if (balanceOf[from] < amount) revert InsufficientBalance();\n        balanceOf[from] -= amount;\n        balanceOf[to] += amount;\n        emit Transfer(from, to, amount);\n    }\n}\n"
+    }
+  },
+  "settings": {
+    "remappings": [
+      "forge-std/=lib/forge-std/src/"
+    ],
+    "optimizer": {
+      "enabled": true,
+      "runs": 200
+    },
+    "metadata": {
+      "useLiteralContent": false,
+      "bytecodeHash": "ipfs",
+      "appendCBOR": true
+    },
+    "outputSelection": {
+      "*": {
+        "*": [
+          "abi",
+          "evm.bytecode.object",
+          "evm.bytecode.sourceMap",
+          "evm.bytecode.linkReferences",
+          "evm.deployedBytecode.object",
+          "evm.deployedBytecode.sourceMap",
+          "evm.deployedBytecode.linkReferences",
+          "evm.deployedBytecode.immutableReferences",
+          "evm.methodIdentifiers",
+          "metadata"
+        ]
+      }
+    },
+    "evmVersion": "cancun",
+    "viaIR": false,
+    "libraries": {}
+  }
+}

@@ -1,0 +1,44 @@
+{
+  "language": "Solidity",
+  "sources": {
+    "src/mocks/MockAgentIdRegistry.sol": {
+      "content": "// SPDX-License-Identifier: MIT\npragma solidity 0.8.26;\n\nimport {IAgentIdRegistry} from \"../interfaces/IAgentIdRegistry.sol\";\n\n/// @title MockAgentIdRegistry\n/// @notice Testnet and local stand-in for the SPACE ID Agent ID registry.\n/// @dev NOT the mainnet registry. The constructor refuses chain 56. Handles follow\n///      the live rules that were observed and documented: 1 to 20 bytes, lowercase\n///      `a-z` and `0-9`, no `.ai` suffix, one handle per address, one address per\n///      handle. Anyone may register a handle for themselves so a testnet demo can\n///      run before an official testnet registry exists. Do not point a mainnet\n///      market at this contract.\ncontract MockAgentIdRegistry is IAgentIdRegistry {\n    error MainnetForbidden();\n    error InvalidHandle();\n    error HandleTaken();\n    error AddressTaken();\n\n    uint256 public constant MAX_LEN = 20;\n\n    mapping(address => string) private _handleOf;\n    mapping(bytes32 => address) private _ownerOf;\n\n    constructor() {\n        if (block.chainid == 56) revert MainnetForbidden();\n    }\n\n    /// @notice The app uses this to show a \"register a test handle\" form.\n    ///         The real SPACE ID registry has no such function.\n    function isTestnetMock() external pure returns (bool) {\n        return true;\n    }\n\n    function register(string calldata handle) external returns (bytes32 labelhash) {\n        bytes memory raw = bytes(handle);\n        uint256 len = raw.length;\n        if (len == 0 || len > MAX_LEN) revert InvalidHandle();\n        for (uint256 i = 0; i < len; ++i) {\n            bytes1 c = raw[i];\n            bool digit = c >= 0x30 && c <= 0x39;\n            bool lower = c >= 0x61 && c <= 0x7a;\n            if (!digit && !lower) revert InvalidHandle();\n        }\n\n        if (bytes(_handleOf[msg.sender]).length != 0) revert AddressTaken();\n        labelhash = keccak256(raw);\n        if (_ownerOf[labelhash] != address(0)) revert HandleTaken();\n\n        _handleOf[msg.sender] = handle;\n        _ownerOf[labelhash] = msg.sender;\n        emit Registered(labelhash, msg.sender, handle);\n    }\n\n    function handleOf(address owner) external view returns (string memory) {\n        return _handleOf[owner];\n    }\n\n    function ownerOfHandle(string calldata handle) external view returns (address) {\n        return _ownerOf[keccak256(bytes(handle))];\n    }\n}\n"
+    },
+    "src/interfaces/IAgentIdRegistry.sol": {
+      "content": "// SPDX-License-Identifier: MIT\npragma solidity 0.8.26;\n\n/// @title IAgentIdRegistry\n/// @notice Read interface for a Binance Agent ID (`name.ai`) registry.\n/// @dev Confirmed against the SPACE ID docs (https://docs.space.id/agent-id) and\n///      against BSC mainnet contract `0x60B9262456dE011F7d15a54CdD8c48bAaa8B022F`\n///      (chain 56, `name` = \"SPACE ID Agent ID\", `symbol` = \"AI\"):\n///        - `handleOf(address)` selector `0xc50a1514`\n///        - `ownerOfHandle(string)` selector `0x1da94fb4`\n///      `ownerOfHandle` expects the bare handle (`zap`, not `zap.ai`) and does not\n///      normalize case. `handleOf` returns \"\" when the address has no Agent ID.\n///      `ownerOfHandle` returns `address(0)` when the handle is not registered.\n///      The same address had no code on BSC testnet (chain 97). This interface\n///      hardcodes no address — the market takes the registry in its constructor.\ninterface IAgentIdRegistry {\n    /// @notice Documented registration event. Handles are permanent.\n    event Registered(bytes32 indexed labelhash, address indexed owner, string handle);\n\n    /// @notice Documented admin registration event. Also permanent.\n    event AdminRegistered(bytes32 indexed labelhash, address indexed owner, string handle);\n\n    /// @notice Reverse lookup. Empty string means the address has no Agent ID.\n    function handleOf(address owner) external view returns (string memory);\n\n    /// @notice Forward lookup. `address(0)` means the handle is not registered.\n    function ownerOfHandle(string calldata handle) external view returns (address);\n}\n"
+    }
+  },
+  "settings": {
+    "remappings": [
+      "forge-std/=lib/forge-std/src/"
+    ],
+    "optimizer": {
+      "enabled": true,
+      "runs": 200
+    },
+    "metadata": {
+      "useLiteralContent": false,
+      "bytecodeHash": "ipfs",
+      "appendCBOR": true
+    },
+    "outputSelection": {
+      "*": {
+        "*": [
+          "abi",
+          "evm.bytecode.object",
+          "evm.bytecode.sourceMap",
+          "evm.bytecode.linkReferences",
+          "evm.deployedBytecode.object",
+          "evm.deployedBytecode.sourceMap",
+          "evm.deployedBytecode.linkReferences",
+          "evm.deployedBytecode.immutableReferences",
+          "evm.methodIdentifiers",
+          "metadata"
+        ]
+      }
+    },
+    "evmVersion": "cancun",
+    "viaIR": false,
+    "libraries": {}
+  }
+}
