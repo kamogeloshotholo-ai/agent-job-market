@@ -1,0 +1,30 @@
+[profile.default]
+src = "src"
+out = "out"
+libs = ["lib"]
+solc = "0.8.26"
+optimizer = true
+optimizer_runs = 200
+evm_version = "cancun"
+fs_permissions = [{ access = "read", path = "./" }]
+
+[profile.default.fuzz]
+runs = 256
+
+[rpc_endpoints]
+bsc_testnet = "${BSC_TESTNET_RPC_URL}"
+bsc = "${BSC_RPC_URL}"
+
+# Foundry sends these keys to the Etherscan API v2 endpoint and selects the
+# chain by id (56 mainnet, 97 testnet). A current Etherscan key covers BscScan.
+[etherscan]
+bsc = { key = "${BSCSCAN_API_KEY}", chain = 56 }
+bsc_testnet = { key = "${BSCSCAN_API_KEY}", chain = 97 }
+
+[fmt]
+line_length = 120
+tab_width = 4
+bracket_spacing = false
+int_types = "long"
+quote_style = "double"
+number_underscore = "thousands"
