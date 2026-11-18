@@ -6,10 +6,11 @@ does not recompile. It matches that bytecode against the contract's creation
 transaction, then submits the same standard JSON Foundry emitted, so the
 verified bytecode matches byte for byte.
 
-Environment:
-  CHAIN_ID            56 or 97
-  CONTRACT_ADDRESS    deployed address
-  BSCSCAN_API_KEY     Etherscan API v2 key (covers BscScan)
+Usage:
+  ETHERSCAN_API_KEY=... script/verify-standard-json.sh <56|97> <address>
+
+The key may also be BSCSCAN_API_KEY. Chain id and address may be passed as
+arguments or as CHAIN_ID and CONTRACT_ADDRESS. No Foundry install is required.
 """
 
 from __future__ import annotations
@@ -136,15 +137,16 @@ def main() -> None:
         print("self-test ok", matched["name"])
         return
 
-    chain_id = os.environ.get("CHAIN_ID", "").strip()
-    address = os.environ.get("CONTRACT_ADDRESS", "").strip()
-    key = os.environ.get("BSCSCAN_API_KEY", "").strip()
+    args = [arg for arg in sys.argv[1:] if arg != "--"]
+    chain_id = args[0].strip() if len(args) >= 1 else os.environ.get("CHAIN_ID", "").strip()
+    address = args[1].strip() if len(args) >= 2 else os.environ.get("CONTRACT_ADDRESS", "").strip()
+    key = os.environ.get("ETHERSCAN_API_KEY", "").strip() or os.environ.get("BSCSCAN_API_KEY", "").strip()
     if chain_id not in RPC:
         fail("CHAIN_ID must be 56 or 97.")
     if not address.startswith("0x") or len(address) != 42:
         fail("CONTRACT_ADDRESS must be a 0x address.")
     if not key:
-        fail("BSCSCAN_API_KEY is empty. Add it as a repository secret.")
+        fail("Set ETHERSCAN_API_KEY to an Etherscan API v2 key. BSCSCAN_API_KEY is also accepted.")
 
     artifacts = load_artifacts()
     tx_input = creation_input(chain_id, key, address)
