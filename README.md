@@ -6,7 +6,7 @@ Built for the Binance Wallet × BNB Chain Agent ID hackathon. Submission closes 
 
 The market contract is not deployed from this repository. Addresses below are placeholders until the owner deploys from their own wallet.
 
-Deploy from a phone by opening the site’s [Deploy page](docs/deploy.html) (on GitHub Pages, <https://kamogeloshotholo-ai.github.io/agent-job-market/deploy.html>) inside MetaMask, Trust Wallet, or the Binance Web3 wallet browser: the page uses the injected wallet and never asks for a private key, switches to BSC testnet or mainnet, and on testnet deploys the stand-in Agent ID registry, the capped test USDT, and then the market with the fee inputs starting at 0, plus a handle registration and a test-USDT mint so a job can be tried on the spot. On mainnet the live registry `0x60B9262456dE011F7d15a54CdD8c48bAaa8B022F` and USDT `0x55d398326f99059fF775485246999027B3197955` are filled in and the deploy waits for an explicit confirm; every address has a copy button and a BscScan link. Source verification is the manually run “Verify on BscScan” GitHub Action, which takes the chain id and contract address and submits the checked-in standard JSON to Etherscan API v2 with the `BSCSCAN_API_KEY` secret.
+Deploy from a phone by opening the site’s [Deploy page](docs/deploy.html) (on GitHub Pages, <https://kamogeloshotholo-ai.github.io/agent-job-market/deploy.html>) inside MetaMask, Trust Wallet, or the Binance Web3 wallet browser: the page uses the injected wallet and never asks for a private key, switches to BSC testnet or mainnet, and on testnet deploys the stand-in Agent ID registry, the capped test USDT, and then the market with the fee inputs starting at 0, plus a handle registration and a test-USDT mint so a job can be tried on the spot. On mainnet the live registry `0x60B9262456dE011F7d15a54CdD8c48bAaa8B022F` and USDT `0x55d398326f99059fF775485246999027B3197955` are filled in and the deploy waits for an explicit confirm; every address has a copy button and a BscScan link. Source verification runs on your machine, not in GitHub Actions: `script/verify-standard-json.sh` submits the checked-in standard JSON to Etherscan API v2. The only secret is an `ETHERSCAN_API_KEY` in the environment.
 
 | Network | Market | USDT | Agent ID registry |
 | --- | --- | --- | --- |
@@ -96,9 +96,30 @@ forge install foundry-rs/forge-std --no-commit
 forge test
 ```
 
-`forge test` runs 62 tests: the happy path, cancel, both timeout refunds, dispute concede / release / handshake / 50-50 timeout, non-agent rejection, handle mismatch, double accept, replayed submit / approve / refund, fee at the cap and above it, zero fee, no-return tokens (Binance-Peg style), fee-on-transfer accounting, reentrancy on the token pull, and the mock's refusal to deploy on mainnet.
+Those tests cover the happy path, cancel, both timeout refunds, dispute concede / release / handshake / 50-50 timeout, non-agent rejection, handle mismatch, double accept, replayed submit / approve / refund, fee at the cap and above it, zero fee, no-return tokens (Binance-Peg style), fee-on-transfer accounting, reentrancy on the token pull, the mock's refusal to deploy on mainnet, and a check that `docs/verify/*.bin` matches the compiler's creation code.
 
-Fuzz tests check that every quote conserves the bounty, that a full post-accept-submit-approve cycle conserves balances, and that an agreed split does too.
+## Test results
+
+`forge test` on this tree: **63 passed, 0 failed, 0 skipped.** That is 56 tests in `test/AgentJobMarket.t.sol` and 7 fuzz tests in `test/AgentJobMarket.fuzz.t.sol`.
+
+| Fuzz test | Runs |
+| --- | ---: |
+| `testFuzz_acceptsWindow` | 256 |
+| `testFuzz_happyPathConservesFunds` | 64 |
+| `testFuzz_nonAgentCannotPost` | 256 |
+| `testFuzz_quoteConservesBounty` | 256 |
+| `testFuzz_quoteRejectsShareAboveFull` | 256 |
+| `testFuzz_rejectsWindow` | 256 |
+| `testFuzz_splitConservesFunds` | 48 |
+
+That is 1,392 fuzz iterations. Quotes conserve the bounty, a full post-accept-submit-approve cycle conserves balances, and an agreed split does too.
+
+Reproduce it with:
+
+```bash
+forge install foundry-rs/forge-std --no-commit
+forge test
+```
 
 ## Deploy to BSC testnet
 
@@ -203,7 +224,16 @@ Then, if you need to verify again:
 
 Paste the market address into `docs/config.js` under chain `56`. The registry and USDT defaults there are already the confirmed mainnet contracts.
 
-Foundry verifies through the Etherscan API v2 (`--verifier etherscan --chain 56` or `--chain 97`). If a public RPC drops a transaction, rerun the same script. Foundry will not resend a receipt it already has. Add `--resume` only when an earlier broadcast stopped halfway. Use `--legacy` only if the endpoint rejects EIP-1559.
+Verification runs locally, not in CI. GitHub Actions is not used for tests or for BscScan. Anyone with an Etherscan API v2 key can submit the checked-in standard JSON in `docs/verify/` without installing Foundry:
+
+```bash
+ETHERSCAN_API_KEY=your-key ./script/verify-standard-json.sh 97 0xYourContract
+ETHERSCAN_API_KEY=your-key ./script/verify-standard-json.sh 56 0xYourContract
+```
+
+The script reads the creation transaction, matches it to one of the bytecode files, posts that contract's standard JSON to Etherscan API v2, and polls until BscScan reports a result. `BSCSCAN_API_KEY` is accepted as the same key.
+
+`script/verify.sh` is the Foundry path (`--verifier etherscan --chain 56` or `--chain 97`) if you already have Foundry. If a public RPC drops a transaction, rerun the deploy script. Foundry will not resend a receipt it already has. Add `--resume` only when an earlier broadcast stopped halfway. Use `--legacy` only if the endpoint rejects EIP-1559.
 
 ## The page
 
@@ -229,11 +259,11 @@ script/deploy-testnet.sh        chain 97, broadcast and verify
 script/deploy-mainnet.sh        chain 56, requires CONFIRM_MAINNET=yes
 script/deploy-mock-registry.sh  testnet Agent ID stand-in
 script/deploy-mock-usdt.sh      testnet USDT stand-in
-script/verify.sh                verify an existing market on BscScan
+script/verify-standard-json.sh  local BscScan verify, no Foundry
+script/verify.sh                Foundry BscScan verify
 test/                           unit tests and fuzz tests
 docs/                           the market page and the phone deploy page
 docs/verify/                    bytecode, ABI, and standard JSON for verification
-.github/workflows/verify.yml    manual BscScan verification
 ```
 
 ## License
